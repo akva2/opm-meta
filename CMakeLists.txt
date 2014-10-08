@@ -10,6 +10,7 @@ enable_language(Fortran)
 if(RUN_TESTS)
   find_program(CTEST_EXECUTABLE NAMES ctest ctest28)
   set(BUILD_COMMAND ${CTEST_EXECUTABLE} -D Nightly)
+  enable_testing()
   message("Tests will be run and submitted to the dash (for the OPM modules)")
 else()
   set(BUILD_COMMAND make)
@@ -80,18 +81,17 @@ endif()
 if(RELEASE_VERSION STREQUAL "2013.10")
   set(DUNE_VERSION v2.2.1)
   set(OPM_VERSION  release/2013.10)
-  set(ERT_VERSION  release/2013.10/final)
+  set(ERT_VERSION  release/2013.10/final2)
 endif()
 
-set_if_not_present(DUNE_VERSION "master")
-set_if_not_present(OPM_VERSION  "master")
-set_if_not_present(ERT_VERSION  "master")
+set_if_not_present(DUNE_VERSION "origin/master")
+set_if_not_present(OPM_VERSION  "origin/master")
+set_if_not_present(ERT_VERSION  "origin/master")
 
 if(RELEASE_VERSION)
   message(STATUS "Building OPM release ${RELEASE_VERSION}")
 endif()
 
-set(common_options)
 if(EXISTS /etc/redhat-release)
   file(STRINGS /etc/redhat-release redhat_release)
   if(${redhat_release} MATCHES "5.")
@@ -106,6 +106,10 @@ if(EXISTS /etc/redhat-release)
   endif()
 endif()
 
+if(CMAKE_TOOLCHAIN_FILE)
+  list(APPEND common_options -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
+endif()
+
 # List of dune repos
 foreach(dune_repo dune-common;dune-geometry;dune-grid;dune-istl;dune-localfunctions)
   set_if_not_present(${dune_repo}_REPO http://git.dune-project.org/repositories/${dune_repo})
@@ -117,9 +121,11 @@ endforeach()
 foreach(opm_repo opm-core;dune-cornerpoint;opm-porsol;
                  opm-upscaling;opm-polymer;opm-autodiff;
                  opm-material;opm-verteq;opm-parser;ewoms)
-  set_if_not_present(${opm_repo}_REPO git://github.com/OPM/${opm_repo})
-  set_if_not_present(${opm_repo}_VERSION ${OPM_VERSION})
-  message("${opm_repo}: ${${opm_repo}_VERSION} ${${opm_repo}_REPO}")
+  if(NOT ${opm_repo}_DISABLED)
+    set_if_not_present(${opm_repo}_REPO git://github.com/OPM/${opm_repo})
+    set_if_not_present(${opm_repo}_VERSION ${OPM_VERSION})
+    message("${opm_repo}: ${${opm_repo}_VERSION} ${${opm_repo}_REPO}")
+  endif()
 endforeach()
 
 # Add targets
@@ -141,18 +147,18 @@ else()
   endforeach()
 endif()
 
-if(ERT_VERSION STREQUAL "master")
+if(ERT_VERSION STREQUAL "origin/master")
   externalproject_add(ert
                       GIT_REPOSITORY git://github.com/Ensembles/ert
                       GIT_TAG ${ERT_VERSION}
                       PREFIX ert
-                      CONFIGURE_COMMAND ${CMAKE_COMMAND} -DBUILD_SHARED_LIBS=0 -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/installed <SOURCE_DIR>/devel ${common_options})
+                      CONFIGURE_COMMAND ${CMAKE_COMMAND} -DBUILD_SHARED_LIBS=1 -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/installed <SOURCE_DIR>/devel ${common_options})
 else()
   externalproject_add(ert
                       GIT_REPOSITORY git://github.com/Ensembles/ert
                       UPDATE_COMMAND git checkout ${ERT_VERSION}
                       PREFIX ert
-                      CONFIGURE_COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/installed <SOURCE_DIR>/devel -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DSHARED_LIB=0 ${common_options})
+                      CONFIGURE_COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/installed <SOURCE_DIR>/devel -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DBUILD_SHARED_LIBS=0 ${common_options})
 endif()
 
 foreach(opm_repo opm-core;dune-cornerpoint;opm-porsol;opm-upscaling;opm-polymer)
@@ -168,17 +174,24 @@ add_dependencies(dune-localfunctions dune-geometry)
 add_dependencies(opm-porsol       opm-core dune-cornerpoint)
 add_dependencies(opm-upscaling    opm-porsol)
 add_dependencies(opm-polymer      opm-core)
-add_dependencies(opm-core         dune-common dune-istl ert)
+add_dependencies(opm-core         dune-common dune-istl)
 
 if(NOT RELEASE_VERSION STREQUAL "2013.03")
+  if (RELEASE_VERSION STREQUAL "2013.10")
+    set(eigen_VERSION 9f6cc779)
+  else()
+    set(eigen_VERSION 4454cb96)
+  endif()
   externalproject_add(eigen3
                       GIT_REPOSITORY git://github.com/OPM/eigen3
                       PREFIX eigen3
-                      UPDATE_COMMAND git checkout 9f6cc779c101b87184076322603f496e5fdd0432
+                      UPDATE_COMMAND git checkout ${eigen_VERSION}
                       CMAKE_ARGS -DEIGEN_TEST_NO_OPENGL=1 -DEIGEN_BUILD_PKGCONFIG=0 -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/installed)
 
   foreach(opm_repo opm-autodiff;opm-material;opm-verteq;ewoms)
-    from_git(${opm_repo} ${${opm_repo}_REPO} ${${opm_repo}_VERSION})
+    if(NOT ${opm_repo}_DISABLED)
+      from_git(${opm_repo} ${${opm_repo}_REPO} ${${opm_repo}_VERSION})
+    endif()
   endforeach()
 
   add_dependencies(opm-core ert)
@@ -186,5 +199,17 @@ if(NOT RELEASE_VERSION STREQUAL "2013.03")
   add_dependencies(opm-verteq   opm-core)
   add_dependencies(opm-autodiff opm-core eigen3 dune-cornerpoint opm-material)
   add_dependencies(opm-porsol   opm-material)
-  add_dependencies(ewoms dune-grid dune-localfunctions dune-istl opm-core opm-material)
+  if(NOT ewoms_DISABLED)
+    add_dependencies(ewoms dune-grid dune-localfunctions dune-istl opm-core opm-material)
+  endif()
+endif()
+
+if(NOT RELEASE_VERSION STREQUAL "2013.03" AND NOT RELEASE_VERSION STREQUAL "2013.10")
+  foreach(opm_repo opm-parser)
+    if(NOT ${opm_repo}_DISABLED)
+      from_git(${opm_repo} ${${opm_repo}_REPO} ${${opm_repo}_VERSION})
+    endif()
+  endforeach()
+  add_dependencies(opm-core   opm-parser)
+  add_dependencies(opm-parser ert)
 endif()
