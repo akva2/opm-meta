@@ -1,11 +1,9 @@
 opm-meta
 ========
 
-This repository holds a meta buildsystem for OPM. The buildsystem will clone and build all components of OPM
-in an automated fashion.
+This repository holds a meta buildsystem for OPM. The buildsystem will clone and build all components of OPM in an automated fashion.
 
-You can specify revision, repository url, patches and build build flags on a per-component basis if you so desire
-through
+You can specify revision, repository url, patches and build build flags on a per-component basis if you so desire through
 
 cmake -D<component>_[REPO|VERSION|PATCHES|CXXFLAGS]
 
@@ -19,8 +17,7 @@ cmake -DDUNE_VERSION=<version>
 
 If no parameters are given, it will build the head of git master for all modules.
 
-While everything relies on use of the 'make install' mechanism, everything is contained in the build tree;
-nothing is installed on your system.
+While everything relies on use of the 'make install' mechanism, all files are contained in the build tree; nothing is installed on your system.
 
 The filesystem layout in the build tree is dictated by cmake and is structured like
 

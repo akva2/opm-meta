@@ -210,6 +210,17 @@ if(NOT RELEASE_VERSION STREQUAL "2013.03" AND NOT RELEASE_VERSION STREQUAL "2013
       from_git(${opm_repo} ${${opm_repo}_REPO} ${${opm_repo}_VERSION})
     endif()
   endforeach()
-  add_dependencies(opm-core   opm-parser)
-  add_dependencies(opm-parser ert)
+  add_dependencies(opm-core    opm-parser)
+  add_dependencies(opm-parser  ert)
+  add_dependencies(opm-polymer opm-autodiff)
 endif()
+
+add_custom_target(merge-commit
+                  COMMAND ${CMAKE_COMMAND}
+		  -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+		  -DCMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}
+		  -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+                  -DDUNE_VERSION=${DUNE_VERSION}
+		  -P ${PROJECT_SOURCE_DIR}/MergeCommit.cmake)
+
+add_dependencies(merge-commit opm-verteq opm-polymer opm-upscaling)
