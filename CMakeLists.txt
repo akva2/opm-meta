@@ -84,7 +84,7 @@ if(RELEASE_VERSION STREQUAL "2013.10")
   set(ERT_VERSION  release/2013.10/final2)
 endif()
 
-set_if_not_present(DUNE_VERSION "origin/master")
+set_if_not_present(DUNE_VERSION "v2.3.1")
 set_if_not_present(OPM_VERSION  "origin/master")
 set_if_not_present(ERT_VERSION  "origin/master")
 
