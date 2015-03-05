@@ -120,7 +120,7 @@ endforeach()
 # List of OPM repos
 foreach(opm_repo opm-core;dune-cornerpoint;opm-porsol;
                  opm-upscaling;opm-polymer;opm-autodiff;
-                 opm-material;opm-verteq;opm-parser;ewoms)
+                 opm-material;opm-verteq;opm-parser;ewoms;opm-benchmarks)
   if(NOT ${opm_repo}_DISABLED)
     set_if_not_present(${opm_repo}_REPO git://github.com/OPM/${opm_repo})
     set_if_not_present(${opm_repo}_VERSION ${OPM_VERSION})
@@ -161,7 +161,7 @@ else()
                       CONFIGURE_COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/installed <SOURCE_DIR>/devel -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DBUILD_SHARED_LIBS=0 ${common_options})
 endif()
 
-foreach(opm_repo opm-core;dune-cornerpoint;opm-porsol;opm-upscaling;opm-polymer)
+foreach(opm_repo opm-core;dune-cornerpoint;opm-porsol;opm-upscaling;opm-polymer;opm-benchmarks)
   from_git(${opm_repo} ${${opm_repo}_REPO} ${${opm_repo}_VERSION})
 endforeach()
 
@@ -175,6 +175,7 @@ add_dependencies(opm-porsol       opm-core dune-cornerpoint)
 add_dependencies(opm-upscaling    opm-porsol)
 add_dependencies(opm-polymer      opm-core)
 add_dependencies(opm-core         dune-common dune-istl)
+add_dependencies(opm-benchmarks   opm-upscaling)
 
 if(NOT RELEASE_VERSION STREQUAL "2013.03")
   if (RELEASE_VERSION STREQUAL "2013.10")
